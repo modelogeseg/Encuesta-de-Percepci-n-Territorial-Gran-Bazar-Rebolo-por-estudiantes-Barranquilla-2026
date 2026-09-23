@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Tablero · Encuesta de Percepción Territorial · OSCC 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,800;1,9..144,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root {
+  --bg:#F0F2F5;--surface:#FFFFFF;--card:#FFFFFF;--card2:#F7F8FA;
+  --navy:#002855;--cobalt:#0057A8;--cobalt2:#00468a;
+  --gold:#C8A84B;--gold2:#9C7A2E;--gold-bg:rgba(200,168,75,.12);--gold-brd:rgba(200,168,75,.35);
+  --teal:#0E9F6E;--teal-bg:rgba(14,159,110,.08);--teal-brd:rgba(14,159,110,.22);
+  --accent:#D6534A;--acc-bg:rgba(214,83,74,.08);--acc-brd:rgba(214,83,74,.25);
+  --orange:#E07A28;--orange-bg:rgba(224,122,40,.08);
+  --border:rgba(0,40,85,.1);--brd2:rgba(0,40,85,.05);
+  --ink:#1C2B3A;--ink2:#3D5568;--ink3:#6B7D8D;
+  --r:10px;--r2:16px;--r3:24px;
+  --sh:0 4px 20px rgba(0,40,85,.06);
+  --font-d:'Fraunces',Georgia,serif;--font-b:'Space Grotesk',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font-b);background:var(--bg);color:var(--ink);font-size:14px;line-height:1.6;padding-top:env(safe-area-inset-top,0);}
+
+/* Header */
+.header{background:var(--navy);padding:20px 28px;position:relative;}
+.header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--cobalt),var(--gold),var(--teal),var(--cobalt));background-size:400% 100%;animation:stripe 6s linear infinite;}
+@keyframes stripe{0%{background-position:0%}100%{background-position:400%}}
+.h-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+.h-left{display:flex;align-items:center;gap:14px;}
+.h-logo{background:#fff;border-radius:8px;padding:6px 14px;font-weight:800;font-size:1.15em;color:var(--navy);letter-spacing:.04em;line-height:1;}
+.h-logo small{display:block;font-size:.48em;font-weight:600;color:var(--cobalt);letter-spacing:.02em;}
+.h-title{color:#fff;}.h-title h1{font-family:var(--font-d);font-size:1.2em;font-weight:700;font-style:italic;line-height:1.2;}
+.h-title p{font-size:.75em;color:rgba(255,255,255,.65);}
+.h-status{display:flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:20px;font-size:.72em;color:#fff;}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--teal);animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.status-dot.err{background:var(--accent);animation:none;}
+
+/* Main */
+.wrap{max-width:1200px;margin:0 auto;padding:24px 20px 60px;}
+
+/* KPI Strip */
+.kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px;}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:18px 20px;box-shadow:var(--sh);}
+.kpi-label{font-size:.68em;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:4px;}
+.kpi-val{font-family:var(--font-d);font-size:1.8em;font-weight:800;color:var(--navy);line-height:1;}
+.kpi-sub{font-size:.72em;color:var(--ink3);margin-top:4px;}
+.kpi-val.good{color:var(--teal);}.kpi-val.warn{color:var(--orange);}.kpi-val.bad{color:var(--accent);}
+
+/* Grid */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;}
+@media(max-width:768px){.grid{grid-template-columns:1fr;}}
+.grid-full{grid-column:1/-1;}
+
+/* Card */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r3);box-shadow:var(--sh);overflow:hidden;}
+.card-top{padding:14px 18px;border-bottom:1px solid var(--brd2);display:flex;align-items:center;justify-content:space-between;}
+.card-title{font-family:var(--font-d);font-size:.88em;font-weight:600;color:var(--ink);}
+.card-badge{font-size:.62em;font-weight:600;padding:3px 10px;border-radius:12px;background:var(--gold-bg);border:1px solid var(--gold-brd);color:var(--gold2);}
+.card-body{padding:18px;}
+
+/* Map */
+#map{height:350px;border-radius:0 0 var(--r3) var(--r3);}
+
+/* Chart */
+.chart-wrap{position:relative;height:280px;}
+
+/* Table */
+.tbl-wrap{max-height:320px;overflow-y:auto;}
+table{width:100%;border-collapse:collapse;font-size:.78em;}
+th{position:sticky;top:0;background:var(--navy);color:#fff;padding:8px 10px;text-align:left;font-weight:600;font-size:.72em;text-transform:uppercase;letter-spacing:.05em;}
+td{padding:7px 10px;border-bottom:1px solid var(--brd2);color:var(--ink2);}
+tr:hover td{background:var(--card2);}
+
+/* Loading */
+.loading{position:fixed;inset:0;background:rgba(255,255,255,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;}
+.loading.hide{display:none;}
+.loading h2{font-family:var(--font-d);font-size:1.3em;color:var(--navy);margin-bottom:6px;}
+.loading p{font-size:.82em;color:var(--ink3);}
+.spinner{width:40px;height:40px;border:3px solid var(--brd2);border-top-color:var(--cobalt);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:16px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Footer */
+.footer{border-top:1px solid var(--border);padding:12px 24px;display:flex;justify-content:space-between;font-size:.68em;color:var(--ink3);background:var(--surface);flex-wrap:wrap;gap:6px;}
+.footer b{color:var(--ink);}
+</style>
+</head>
+<body>
+
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  <h2>Cargando datos...</h2>
+  <p id="load-msg">Conectando con la base de datos de la OSCC</p>
+</div>
+
+<div class="header">
+  <div class="h-inner">
+    <div class="h-left">
+      <div class="h-logo">OSCC<small>Seguridad y Convivencia</small></div>
+      <div class="h-title">
+        <h1>Encuesta de Percepción Territorial</h1>
+        <p>Gran Bazar · Rebolo · Barranquilla 2026</p>
+      </div>
+    </div>
+    <div class="h-status" id="status">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Conectando...</span>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- KPIs -->
+  <div class="kpi-strip">
+    <div class="kpi"><div class="kpi-label">Total encuestas</div><div class="kpi-val" id="kTotal">—</div><div class="kpi-sub" id="kSectores">—</div></div>
+    <div class="kpi"><div class="kpi-label">Percepción de seguridad</div><div class="kpi-val" id="kSeg">—</div><div class="kpi-sub">Promedio Likert (1–5)</div></div>
+    <div class="kpi"><div class="kpi-label">Percepción de convivencia</div><div class="kpi-val" id="kConv">—</div><div class="kpi-sub">Promedio Likert (1–5)</div></div>
+    <div class="kpi"><div class="kpi-label">Confianza en Policía</div><div class="kpi-val" id="kPol">—</div><div class="kpi-sub">Promedio Likert (1–5)</div></div>
+    <div class="kpi"><div class="kpi-label">Confianza en Alcaldía</div><div class="kpi-val" id="kAlc">—</div><div class="kpi-sub">Promedio Likert (1–5)</div></div>
+    <div class="kpi"><div class="kpi-label">Tasa de victimización</div><div class="kpi-val" id="kVict">—</div><div class="kpi-sub">Víctimas o testigos</div></div>
+  </div>
+
+  <!-- Charts row 1 -->
+  <div class="grid">
+    <div class="card">
+      <div class="card-top"><span class="card-title">Problemas de seguridad más frecuentes</span></div>
+      <div class="card-body"><div class="chart-wrap"><canvas id="chartSeg"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-top"><span class="card-title">Problemas de convivencia más frecuentes</span></div>
+      <div class="card-body"><div class="chart-wrap"><canvas id="chartConv"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- Charts row 2 -->
+  <div class="grid">
+    <div class="card">
+      <div class="card-top"><span class="card-title">Necesidades prioritarias</span></div>
+      <div class="card-body"><div class="chart-wrap"><canvas id="chartNec"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-top"><span class="card-title">¿Por qué no denuncian?</span></div>
+      <div class="card-body"><div class="chart-wrap"><canvas id="chartDen"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- Map + Demographics -->
+  <div class="grid">
+    <div class="card grid-full">
+      <div class="card-top"><span class="card-title">Mapa de puntos de encuesta</span><span class="card-badge" id="mapBadge">0 geolocalizados</span></div>
+      <div id="map"></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-top"><span class="card-title">Distribución por edad</span></div>
+      <div class="card-body"><div class="chart-wrap"><canvas id="chartEdad"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-top"><span class="card-title">Percepción por sector</span></div>
+      <div class="card-body"><div class="chart-wrap"><canvas id="chartSector"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="card">
+    <div class="card-top"><span class="card-title">Últimas encuestas registradas</span></div>
+    <div class="card-body">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Código</th><th>Fecha</th><th>Sector</th><th>Seguridad</th><th>Convivencia</th><th>Conf. Policía</th><th>Urgencia</th></tr></thead>
+          <tbody id="tblBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <div><b>OSCC Barranquilla 2026</b> · Tablero de Percepción Territorial · CONVIVE 360°</div>
+  <div id="lastUpdate">—</div>
+</div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwOGjhUu0dezk3H3klf9obDiox6GLHHLmMJr4JHt68wooIWx44aDsEduBNjOZqtJbnG/exec';
+let DATA = [];
+
+async function cargarDatos() {
+  document.getElementById('load-msg').textContent = 'Descargando encuestas...';
+  try {
+    const url = SCRIPT_URL + '?action=getData&pp=ENC';
+    const r = await fetch(url);
+    const j = await r.json();
+    DATA = (j.status === 'ok' && j.data) ? j.data : [];
+    
+    document.getElementById('statusDot').className = 'status-dot';
+    document.getElementById('statusText').textContent = '● En línea · ' + DATA.length + ' encuestas';
+  } catch(e) {
+    console.warn('Error cargando:', e);
+    document.getElementById('statusDot').className = 'status-dot err';
+    document.getElementById('statusText').textContent = '● Sin conexión';
+  }
+  document.getElementById('loading').classList.add('hide');
+  document.getElementById('lastUpdate').textContent = 'Actualizado: ' + new Date().toLocaleTimeString('es-CO');
+  renderizar();
+}
+
+function avg(arr) { if (!arr.length) return 0; return arr.reduce((a,b)=>a+b,0)/arr.length; }
+function countValues(arr) { const c = {}; arr.forEach(v => { if(v) c[v] = (c[v]||0)+1; }); return c; }
+function countMulti(arr) {
+  const c = {};
+  arr.forEach(v => { if(!v) return; v.split(' | ').forEach(item => { if(item.trim()) c[item.trim()] = (c[item.trim()]||0)+1; }); });
+  return c;
+}
+function likertColor(v) { return v >= 3.5 ? 'good' : v >= 2.5 ? 'warn' : 'bad'; }
+
+function renderizar() {
+  if (!DATA.length) { document.getElementById('kTotal').textContent = '0'; return; }
+
+  // KPIs
+  const n = DATA.length;
+  document.getElementById('kTotal').textContent = n;
+  const sectores = new Set(DATA.map(r => r.sector).filter(Boolean));
+  document.getElementById('kSectores').textContent = sectores.size + ' sectores cubiertos';
+
+  const segVals = DATA.map(r => parseFloat(r.p_seguridad)).filter(v => !isNaN(v));
+  const segAvg = avg(segVals);
+  document.getElementById('kSeg').textContent = segAvg.toFixed(1);
+  document.getElementById('kSeg').className = 'kpi-val ' + likertColor(segAvg);
+
+  const convVals = DATA.map(r => parseFloat(r.p_convivencia)).filter(v => !isNaN(v));
+  const convAvg = avg(convVals);
+  document.getElementById('kConv').textContent = convAvg.toFixed(1);
+  document.getElementById('kConv').className = 'kpi-val ' + likertColor(convAvg);
+
+  const polVals = DATA.map(r => parseFloat(r.conf_policia)).filter(v => !isNaN(v));
+  const polAvg = avg(polVals);
+  document.getElementById('kPol').textContent = polAvg.toFixed(1);
+  document.getElementById('kPol').className = 'kpi-val ' + likertColor(polAvg);
+
+  const alcVals = DATA.map(r => parseFloat(r.conf_alcaldia)).filter(v => !isNaN(v));
+  const alcAvg = avg(alcVals);
+  document.getElementById('kAlc').textContent = alcAvg.toFixed(1);
+  document.getElementById('kAlc').className = 'kpi-val ' + likertColor(alcAvg);
+
+  const victimas = DATA.filter(r => r.victima === 'si_victima' || r.victima === 'si_testigo').length;
+  const victPct = Math.round(victimas / n * 100);
+  document.getElementById('kVict').textContent = victPct + '%';
+  document.getElementById('kVict').className = 'kpi-val ' + (victPct > 50 ? 'bad' : victPct > 25 ? 'warn' : 'good');
+
+  // Charts
+  renderBarChart('chartSeg', countMulti(DATA.map(r => r.prob_seguridad)), '#D6534A');
+  renderBarChart('chartConv', countMulti(DATA.map(r => r.prob_convivencia)), '#C8A84B');
+  renderBarChart('chartNec', countMulti(DATA.map(r => r.necesidades)), '#0057A8');
+  renderDenunciaChart();
+  renderEdadChart();
+  renderSectorChart();
+  renderMap();
+  renderTable();
+}
+
+function renderBarChart(canvasId, counts, color) {
+  const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0, 8);
+  const labels = {
+    hurto:'Hurto/atraco', extorsion:'Extorsión', microtrafico:'Microtráfico', homicidio:'Homicidios',
+    grupos:'Grupos armados', vigilancia_ilegal:'Vigilancia ilegal', riñas:'Riñas', vif:'Violencia intrafamiliar',
+    ruido:'Ruido', basuras:'Basuras/aseo', espacio_pub:'Invasión espacio púb.', animales:'Animales sueltos',
+    consumo_drogas:'Drogas en vía', alcohol:'Alcohol en vía', vecinos:'Conflictos vecinos',
+    mas_policia:'Más policía', camaras:'Cámaras', alumbrado:'Alumbrado', espacios:'Espacios recreación',
+    empleo:'Empleo', educacion:'Educación', justicia:'Justicia', intervencion:'Intervención grupos', ninguno:'Ninguno'
+  };
+  new Chart(document.getElementById(canvasId), {
+    type: 'bar',
+    data: {
+      labels: sorted.map(([k]) => labels[k] || k),
+      datasets: [{ data: sorted.map(([,v]) => v), backgroundColor: color + '44', borderColor: color, borderWidth: 1.5, borderRadius: 6 }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,.04)' } }, y: { grid: { display: false } } }
+    }
+  });
+}
+
+function renderDenunciaChart() {
+  const counts = countValues(DATA.map(r => r.denuncia));
+  const labels = { si:'Sí denunció', no_miedo:'No — miedo', no_inutil:'No — no sirve', no_desconoce:'No — no sabe cómo', na:'No aplica' };
+  const colors = ['#0E9F6E','#D6534A','#E07A28','#C8A84B','#97A6B5'];
+  const entries = Object.entries(counts).filter(([k]) => k);
+  new Chart(document.getElementById('chartDen'), {
+    type: 'doughnut',
+    data: {
+      labels: entries.map(([k]) => labels[k] || k),
+      datasets: [{ data: entries.map(([,v]) => v), backgroundColor: colors.slice(0, entries.length), borderWidth: 0 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 11, family: 'Space Grotesk' } } } } }
+  });
+}
+
+function renderEdadChart() {
+  const counts = countValues(DATA.map(r => r.edad));
+  const order = ['18-25','26-35','36-50','51-65','65+'];
+  const vals = order.map(k => counts[k] || 0);
+  new Chart(document.getElementById('chartEdad'), {
+    type: 'bar',
+    data: {
+      labels: order,
+      datasets: [{ data: vals, backgroundColor: '#0057A844', borderColor: '#0057A8', borderWidth: 1.5, borderRadius: 6 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,.04)' } }, x: { grid: { display: false } } } }
+  });
+}
+
+function renderSectorChart() {
+  const bySector = {};
+  DATA.forEach(r => {
+    if (!r.sector) return;
+    if (!bySector[r.sector]) bySector[r.sector] = { seg: [], conv: [] };
+    const s = parseFloat(r.p_seguridad); if (!isNaN(s)) bySector[r.sector].seg.push(s);
+    const c = parseFloat(r.p_convivencia); if (!isNaN(c)) bySector[r.sector].conv.push(c);
+  });
+  const sectors = Object.keys(bySector).sort();
+  const shortNames = sectors.map(s => s.replace('Rebolo — ','R:').replace('Gran Bazar — ','GB:'));
+  new Chart(document.getElementById('chartSector'), {
+    type: 'bar',
+    data: {
+      labels: shortNames,
+      datasets: [
+        { label: 'Seguridad', data: sectors.map(s => avg(bySector[s].seg).toFixed(1)), backgroundColor: '#D6534A66', borderColor: '#D6534A', borderWidth: 1.5, borderRadius: 4 },
+        { label: 'Convivencia', data: sectors.map(s => avg(bySector[s].conv).toFixed(1)), backgroundColor: '#C8A84B66', borderColor: '#C8A84B', borderWidth: 1.5, borderRadius: 4 }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 5, grid: { color: 'rgba(0,0,0,.04)' } }, x: { grid: { display: false } } }, plugins: { legend: { labels: { font: { size: 11, family: 'Space Grotesk' } } } } }
+  });
+}
+
+function renderMap() {
+  const map = L.map('map').setView([10.9667, -74.7833], 15);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap, © CARTO', maxZoom: 19
+  }).addTo(map);
+
+  let geoCount = 0;
+  DATA.forEach(r => {
+    const lat = parseFloat(r.latitud), lng = parseFloat(r.longitud);
+    if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
+    geoCount++;
+    const seg = parseFloat(r.p_seguridad) || 3;
+    const color = seg <= 2 ? '#D6534A' : seg <= 3 ? '#E07A28' : '#0E9F6E';
+    L.circleMarker([lat, lng], { radius: 7, fillColor: color, color: '#fff', weight: 1.5, fillOpacity: .8 })
+      .addTo(map)
+      .bindPopup(`<strong>${r.sector || 'Sin sector'}</strong><br>Seguridad: ${r.p_seguridad}/5<br>Convivencia: ${r.p_convivencia}/5<br>${r.fecha || ''}`);
+  });
+  document.getElementById('mapBadge').textContent = geoCount + ' geolocalizados';
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tblBody');
+  const sorted = [...DATA].sort((a,b) => (b.timestamp||'').localeCompare(a.timestamp||'')).slice(0, 30);
+  tbody.innerHTML = sorted.map(r => {
+    const segColor = (parseFloat(r.p_seguridad)||3) <= 2 ? 'color:#D6534A;font-weight:700' : '';
+    return `<tr>
+      <td style="font-weight:600;">${r.codigo||'—'}</td>
+      <td>${r.fecha||'—'}</td>
+      <td>${r.sector||'—'}</td>
+      <td style="${segColor}">${r.p_seguridad||'—'}/5</td>
+      <td>${r.p_convivencia||'—'}/5</td>
+      <td>${r.conf_policia||'—'}/5</td>
+      <td>${r.victima === 'si_victima' ? '🔴 Víctima' : r.victima === 'si_testigo' ? '🟠 Testigo' : '🟢 No'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// Init
+cargarDatos();
+</script>
+</body>
+</html>
